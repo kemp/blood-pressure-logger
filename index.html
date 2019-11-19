@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Blood Pressure Logger</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <div id="app">
+    <h1>Blood Pressure Logger</h1>
+
+    <p>Log your blood pressure. No sign-up required!</p>
+
+    <!-- Blood Pressure Logger -->
+    <form id="log-form" action="{{INVOKE_URL}}" method="POST">
+      <div class="form-group">
+        <label for="systolic">Systolic</label>
+        <input type="number" id="systolic" name="systolic">
+      </div>
+
+      <div class="form-group">
+        <label for="diastolic">Diastolic</label>
+        <input type="number" id="diastolic" name="diastolic">
+      </div>
+
+      <input type="submit" value="Save Data">
+    </form>
+  </div>
+
+  <script>
+    ((window, document) => {
+      'use strict';
+
+      document.getElementById('log-form').addEventListener('submit', logBloodPressure);
+
+      function logBloodPressure(event) {
+        event.preventDefault();
+
+        fetch(event.target.action, {
+          method: event.target.method,
+          body: JSON.stringify({
+            systolic: event.target[0].value, 
+            diastolic: event.target[1].value,
+          })
+        }).then((result) => {
+          alert('Success!');
+        }).catch((error) => {
+          alert('Fail!');
+        });
+
+      }
+    })(window, document);
+  </script>
+</body>
+</html>
