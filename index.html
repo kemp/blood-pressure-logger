@@ -1,56 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Blood Pressure Logger</title>
+    <meta charset="UTF-8">
+    <title>Blood Pressure Logger</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        .status {
+            padding: 0.1rem 0.8rem;
+            border: 3px solid;
+            border-radius: 6px;
+            max-width: max-content;
+            box-shadow: 3px 3px 5px lightgray;
+            font-weight: bold;
+        }
+
+        .status.error {
+            color: firebrick;
+            background: tomato;
+            border-color: firebrick;
+        }
+
+        .status.info {
+            color: darkblue;
+            background: lightblue;
+            border-color: darkblue;
+        }
+
+        .status.success {
+            color: darkgreen;
+            background: springgreen;
+            border-color: darkgreen;
+        }
+
+        .status.warning {
+            color: #7d4e15;
+            background: orange;
+            border-color: #7d4e15;
+        }
+    </style>
 </head>
 <body>
-  <div id="app">
-    <h1>Blood Pressure Logger</h1>
+    <div id="app">
+        <h1>Blood Pressure Logger</h1>
 
-    <p>Log your blood pressure. No sign-up required!</p>
+        <p>Log your blood pressure. No sign-up required!</p>
 
-    <!-- Blood Pressure Logger -->
-    <form id="log-form" action="{{INVOKE_URL}}" method="POST">
-      <div class="form-group">
-        <label for="systolic">Systolic</label>
-        <input type="number" id="systolic" name="systolic">
-      </div>
+        <!-- Blood Pressure Logger -->
+        <form id="log-form" action="{{INVOKE_URL}}" method="POST">
+            <div class="form-group">
+                <label for="systolic">Systolic</label>
+                <input type="number" id="systolic" name="systolic" min="0" required>
+            </div>
 
-      <div class="form-group">
-        <label for="diastolic">Diastolic</label>
-        <input type="number" id="diastolic" name="diastolic">
-      </div>
+            <div class="form-group">
+                <label for="diastolic">Diastolic</label>
+                <input type="number" id="diastolic" name="diastolic" min="0" required>
+            </div>
 
-      <input type="submit" value="Save Data">
-    </form>
-  </div>
+            <input type="submit" value="Save Data">
+        </form>
 
-  <script>
-    ((window, document) => {
-      'use strict';
+        <div style="margin: 2rem 0; display: none;" id="status-message-container" class="status">
+            <p id="status-message"></p>
+            <p id="status-action-container"></p>
+        </div>
 
-      document.getElementById('log-form').addEventListener('submit', logBloodPressure);
+        <div>
+            <p>
+                Sources:
+                <ul>
+                    <li><a href="https://www.mayoclinic.org/diseases-conditions/high-blood-pressure/in-depth/blood-pressure/art-20050982">Mayo Clinic</a></li>
+                </ul>
+            </p>
+        </div>
+    </div>
 
-      function logBloodPressure(event) {
-        event.preventDefault();
+    <script>
+        ((window, document) => {
+            'use strict';
 
-        fetch(event.target.action, {
-          method: event.target.method,
-          body: JSON.stringify({
-            systolic: event.target[0].value, 
-            diastolic: event.target[1].value,
-          })
-        }).then((result) => {
-          alert('Success!');
-        }).catch((error) => {
-          alert('Fail!');
-        });
+            document.getElementById('log-form').addEventListener('submit', handleForm);
 
-      }
-    })(window, document);
-  </script>
+            function setStatus(message, type, actionText, action) {
+                let statusMessageContainer = document.getElementById('status-message-container');
+                let statusMessage = document.getElementById('status-message');
+                let statusActionContainer = document.getElementById('status-action-container');
+
+                statusMessage.innerText = message;
+
+                statusActionContainer.innerHTML = '';
+
+                if (actionText && action) {
+                    let statusAction = document.createElement('button');
+                    statusAction.innerText = actionText;
+                    statusAction.addEventListener('click', action);
+
+                    statusActionContainer.appendChild(statusAction);
+                }
+
+                // Possible status message types
+                const types = [ 'info', 'success', 'error', 'warning' ];
+
+                if (! types.includes(type)) {
+                    type = types[0];
+                }
+
+                types.forEach(t => statusMessageContainer.classList.remove(t));
+                statusMessageContainer.classList.add(type);
+
+                // Only show the status message container if the message is not blank.
+                statusMessageContainer.style.display = message ? 'block' : 'none';
+            }
+
+            function logBloodPressure(systolic, diastolic, action, method) {
+                return new Promise((resolve, reject) => {
+                    fetch(action, {
+                        method: method,
+                        body: JSON.stringify({
+                            systolic: systolic, 
+                            diastolic: diastolic,
+                        })
+                    }).then((response) => {
+                        if (! response.ok) {
+                            reject(response.status);
+                        } else {
+                            resolve(response);
+                        }
+                    }).catch((error) => reject(error));
+                });
+            }
+
+            function findRange(value, maxValueInEachRange) {
+                for (let i = 0; i < maxValueInEachRange.length; i++) {
+                    if (value < maxValueInEachRange[i]) {
+                        return i;
+                    }
+                }
+            }
+
+            function handleForm(event) {
+                event.preventDefault();
+
+                let action = event.target.action;
+                let method = event.target.method;
+
+                let systolic = event.target[0].value;
+                let diastolic = event.target[1].value;
+
+                setStatus('Loading...');
+
+                logBloodPressure(systolic, diastolic, action, method)
+                    .then((response) => {
+                        showLoggedMessage(systolic, diastolic);
+                    }).catch((error) => {
+                        setStatus('There was an error saving the data. Error: ' + error, 'error', 'Try again', () => {
+                            // Resubmit the form
+                            document.getElementById('log-form').submit();
+                        });
+                    });
+            }
+
+            function showLoggedMessage(systolic, diastolic) {
+                // Show a message to the user that their blood pressure has been saved.
+                // If their blood pressure is outside the normal range, give them a warning.
+
+                // Data from: https://www.mayoclinic.org/diseases-conditions/high-blood-pressure/in-depth/blood-pressure/art-20050982
+                const breakpointSystolic = [ 120, 130, 140, Infinity ]; // User must be less than to be in the category
+                const breakpointDiastolic = [ 80, 80, 90, Infinity ];  // User must be less than to be in the category
+                const showWarning = [ false, true, true, true ];
+                const breakpointNames = [ 'normal blood pressure', 'elevated blood pressure', 'stage 1 high blood pressure (hypertension)', 'stage 2 high blood pressure (hypertension)' ];
+
+                let systolicRange = findRange(systolic, breakpointSystolic);
+                let diastolicRange = findRange(diastolic, breakpointDiastolic);
+
+                let userRange = Math.max(systolicRange, diastolicRange);
+
+                if (showWarning[userRange]) {
+                    setStatus(`Your blood pressure has been logged. Our records indicate you may be at risk for ${breakpointNames[userRange]}. Consult with your doctor for more information.`, 'warning');
+                } else {
+                    setStatus(`Your blood pressure has been logged. Our records indicate you have ${breakpointNames[userRange]}. Consider maintaining or adopting a healthy lifestyle.`, 'success');
+                }
+            }
+        })(window, document);
+    </script>
 </body>
 </html>
