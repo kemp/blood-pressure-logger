@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Show Data | Blood Pressure Logger</title>
+</head>
+<body>
+    <div id="app">
+        <h1>Blood Pressure Logger</h1>
+
+        <p>Show previously logged blood pressure entries.</p>
+
+        <p>
+            Navigation:
+            <ul>
+                <li><a href="./index.html">Add new data</a></li>
+                <li><a href="./show.html">Show previously entered data</a> (you are here)</li>
+            </ul>
+        </p>
+
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Systolic</th>
+                    <th>Diastolic</th>
+                </tr>
+            </thead>
+            <tbody id="table-items">
+                <tr>
+                    <td>Loading...</td>
+                    <td>Loading...</td>
+                    <td>Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        ((window, document) => {
+            'use strict';
+
+            const INVOKE_URL = '{{INVOKE_URL}}';
+            const tableItems = document.getElementById('table-items');
+
+            document.addEventListener('DOMContentLoaded', loadBloodPressure);
+
+            async function loadBloodPressure() {
+                tableItems.innerHTML = 'Loading...';
+
+                let response = await fetch(INVOKE_URL);
+
+                if (! response.ok) {
+                    tableItems.innerHTML = 'There was an error with the request.';
+                    return;
+                }
+
+                tableItems.innerHTML = '';
+
+                let items = (await response.json()).Items;
+
+                if (items.length == 0) {
+                    tableItems.innerHTML = 'No data found. Try first logging new data.';
+                }
+
+                for (const item of items) {
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.RequestTime}</td>
+                        <td>${item.Systolic}</td>
+                        <td>${item.Diastolic}</td>
+                    `;
+
+                    tableItems.appendChild(row);
+                }
+            }
+
+        })(window, document);
+    </script>
+</body>
+</html>
