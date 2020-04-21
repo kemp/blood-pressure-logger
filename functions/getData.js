@@ -2,10 +2,12 @@ const AWS = require('aws-sdk');
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 
+const DYNAMODB_TABLE_NAME = 'BloodPressureLogger';
+
 exports.handler = async (event) => {
     
     let data = await ddb.scan({
-        TableName: 'blood-pressure'
+        TableName: DYNAMODB_TABLE_NAME
     }).promise();
     
     return {

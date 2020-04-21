@@ -4,6 +4,8 @@ const AWS = require('aws-sdk');
 
 const ddb = new AWS.DynamoDB.DocumentClient();
 
+const DYNAMODB_TABLE_NAME = 'BloodPressureLogger';
+
 exports.handler = (event, context, callback) => {
 
     const logId = toUrlString(randomBytes(16));
@@ -51,7 +53,7 @@ exports.handler = (event, context, callback) => {
 
 function recordBloodPressure(logId, systolic, diastolic) {
     return ddb.put({
-        TableName: 'blood-pressure',
+        TableName: DYNAMODB_TABLE_NAME,
         Item: {
             LogID: logId,
             Systolic: systolic,
